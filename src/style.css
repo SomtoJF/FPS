@@ -3,3 +3,14 @@ body {
   padding: 0px;
   overflow: hidden;
 }
+
+#crosshair {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 15px;
+  margin-left: -7.5px;
+  margin-top: -7.5px;
+  height: auto;
+}
