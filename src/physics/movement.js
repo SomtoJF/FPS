@@ -1,6 +1,6 @@
 import playerBody from "./playerPhysics";
 
-const InputHandler = () => {
+const InputHandler = (controls) => {
   let movementSpeed = 1;
   let phi = 0;
   let theta = 0;
