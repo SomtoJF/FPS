@@ -202,7 +202,7 @@ function animate() {
 
   player.position.copy(playerBody.position);
   player.quaternion.copy(playerBody.quaternion);
-  // camera.position.copy(playerBody.position);
+  // playerBody.position.copy(camera.position);
 
   playerBody.position.x += 0.01;
   requestAnimationFrame(animate);
