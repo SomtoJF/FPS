@@ -58,7 +58,7 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-camera.position.set(0, 5, 300);
+camera.position.set(150, 10, 0);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const directionalLight = new THREE.DirectionalLight(0xffffff);
@@ -162,7 +162,6 @@ loader.load(soldierModel, function (gltf) {
   player.scale.x = 7;
   player.scale.y = 7;
   player.scale.z = 7;
-
   skeleton = new THREE.SkeletonHelper(player);
   skeleton.visible = false;
   scene.add(skeleton);
@@ -179,7 +178,7 @@ loader.load(soldierModel, function (gltf) {
 
   actions = [idleAction, walkAction, runAction];
 
-  activateAllActions();
+  // activateAllActions();
 
   animate();
 });
@@ -273,8 +272,13 @@ function animate() {
   ground.quaternion.copy(groundBody.quaternion);
 
   player == undefined ? null : (player.position.x = playerBody.position.x);
-  player == undefined ? null : (player.quaternion.z = playerBody.quaternion.z);
-  // playerBody.position.copy(camera.position);
+  player == undefined ? null : (player.position.z = playerBody.position.z);
+  player == undefined ? null : (player.position.y = playerBody.position.y - 6);
+  player == undefined ? null : player.quaternion.copy(playerBody.quaternion);
+  playerBody.position.x = camera.position.x;
+  playerBody.position.z = camera.position.z;
+  camera.position.y = playerBody.position.y + 7;
+  playerBody.quaternion.y = camera.quaternion.y;
 
   playerBody.position.x += 0.01;
   requestAnimationFrame(animate);
