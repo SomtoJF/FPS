@@ -12,7 +12,6 @@ import BoxMesh from "./objects/centerBox";
 import centerBoxBody from "./physics/centerBoxPhysics";
 // import player from "./objects/player";
 import playerBody from "./physics/playerPhysics";
-import createPlayer from "./objects/player";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import soldierModel from "../assets/models/Soldier.glb?url";
 import CannonDebugger from "cannon-es-debugger";
