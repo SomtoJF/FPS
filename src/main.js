@@ -3,7 +3,6 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import * as POSTPROCESSING from "postprocessing";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { GUI } from "dat.gui";
 import cube, { ground } from "./world";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
@@ -11,12 +10,23 @@ import skyImage from "../assets/images/sky.hdr?url";
 import { groundBody, world } from "./physics/worldPhysics";
 import BoxMesh from "./objects/centerBox";
 import centerBoxBody from "./physics/centerBoxPhysics";
-import player from "./objects/player";
+// import player from "./objects/player";
 import playerBody from "./physics/playerPhysics";
-import InputHandler from "./physics/movement";
+import createPlayer from "./objects/player";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import soldierModel from "../assets/models/Soldier.glb?url";
+import CannonDebugger from "cannon-es-debugger";
 
-let orbitControlsActive = true;
+let model, skeleton, mixer;
+const crossFadeControls = [];
+let player;
 
+let idleAction, walkAction, runAction;
+let idleWeight, walkWeight, runWeight;
+let actions, settings;
+
+let singleStepMode = false;
+let sizeOfNextStep = 0;
 let raycaster;
 
 let moveForward = false;
@@ -58,7 +68,6 @@ directionalLight.position.set(1000, 1000, -500);
 const ambientLight = new THREE.AmbientLight(0xffffff, 1);
 
 scene.add(cube, ambientLight, directionalLight, ground, BoxMesh);
-scene.add(player);
 
 const backgroundLoader = new RGBELoader();
 backgroundLoader.load(skyImage, (texture) => {
@@ -72,6 +81,10 @@ window.addEventListener("click", () => {
 });
 
 scene.add(controls.getObject());
+
+const cannonDebugger = new CannonDebugger(scene, world, {
+  color: new THREE.Color("red"),
+});
 raycaster = new THREE.Raycaster(
   new THREE.Vector3(),
   new THREE.Vector3(0, -1, 0),
@@ -134,6 +147,66 @@ const onKeyUp = function (event) {
 
 document.addEventListener("keydown", onKeyDown);
 document.addEventListener("keyup", onKeyUp);
+
+// Loading the player
+const loader = new GLTFLoader();
+loader.load(soldierModel, function (gltf) {
+  player = gltf.scene;
+  scene.add(player);
+
+  console.log(player);
+
+  player.traverse(function (object) {
+    if (object.isMesh) object.castShadow = true;
+  });
+
+  player.scale.x = 7;
+  player.scale.y = 7;
+  player.scale.z = 7;
+
+  skeleton = new THREE.SkeletonHelper(player);
+  skeleton.visible = false;
+  scene.add(skeleton);
+
+  //
+
+  const animations = gltf.animations;
+
+  mixer = new THREE.AnimationMixer(player);
+
+  idleAction = mixer.clipAction(animations[0]);
+  walkAction = mixer.clipAction(animations[3]);
+  runAction = mixer.clipAction(animations[1]);
+
+  actions = [idleAction, walkAction, runAction];
+
+  activateAllActions();
+
+  animate();
+});
+
+function deactivateAllActions() {
+  actions.forEach(function (action) {
+    action.stop();
+  });
+}
+
+function activateAllActions() {
+  setWeight(idleAction, settings["modify idle weight"]);
+  setWeight(walkAction, settings["modify walk weight"]);
+  setWeight(runAction, settings["modify run weight"]);
+
+  actions.forEach(function (action) {
+    action.play();
+  });
+}
+
+function setWeight(action, weight) {
+  action.enabled = true;
+  action.setEffectiveTimeScale(1);
+  action.setEffectiveWeight(weight);
+}
+
 window.addEventListener("resize", onWindowResize);
 
 function onWindowResize() {
@@ -200,16 +273,17 @@ function animate() {
   ground.position.copy(groundBody.position);
   ground.quaternion.copy(groundBody.quaternion);
 
-  player.position.copy(playerBody.position);
-  player.quaternion.copy(playerBody.quaternion);
+  player == undefined ? null : (player.position.x = playerBody.position.x);
+  player == undefined ? null : (player.quaternion.z = playerBody.quaternion.z);
   // playerBody.position.copy(camera.position);
 
   playerBody.position.x += 0.01;
   requestAnimationFrame(animate);
 
+  cannonDebugger.update();
   renderer.render(scene, camera);
 }
 
 animate();
 
-export { scene };
+export { animate };
