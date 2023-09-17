@@ -15,8 +15,11 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import gunModel from "../assets/models/shotgun.glb?url";
 import CannonDebugger from "cannon-es-debugger";
 
-let raycaster;
+// Instantiate movement and shooting raycaster objects
+let movementRaycaster;
+const shootingRaycaster = new THREE.Raycaster();
 
+// Instantiate other variables
 let moveForward = false;
 let moveBackward = false;
 let moveLeft = false;
@@ -81,9 +84,9 @@ scene.add(controls.getObject());
 
 let gun;
 
+// Load gun into scene
 const gunLoader = new GLTFLoader();
 gunLoader.load(gunModel, function (gltf) {
-	const initialGunRotation = new THREE.Euler(0, Math.PI / 2, 0);
 	gun = gltf.scene;
 	gun.scale.set(0.05, 0.05, 0.05);
 	gun.position.set(0, -2, 5);
@@ -110,13 +113,14 @@ gunLoader.load(gunModel, function (gltf) {
 const cannonDebugger = new CannonDebugger(scene, world, {
 	color: new THREE.Color("red"),
 });
-raycaster = new THREE.Raycaster(
+movementRaycaster = new THREE.Raycaster(
 	new THREE.Vector3(),
 	new THREE.Vector3(0, -1, 0),
 	0,
 	10
 );
 
+// Bind movement to arrow and WASD keys
 const onKeyDown = function (event) {
 	switch (event.code) {
 		case "ArrowUp":
@@ -192,17 +196,27 @@ window.addEventListener("click", (event) => {
 		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
 		pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 		// update the picking ray with the camera and pointer position
-		raycaster.setFromCamera(pointer, camera);
+		shootingRaycaster.setFromCamera(pointer, camera);
 
 		// calculate objects intersecting the picking ray
-		const intersects = raycaster.intersectObjects(objectsToIntersect);
+		const intersects = shootingRaycaster.intersectObjects(objectsToIntersect);
 		console.log(intersects);
 
+		const red = new THREE.Color(0xff0000);
 		for (let i = 0; i < intersects.length; i++) {
-			intersects[i].object.material.color.set(0xff0000);
+			flashColor(intersects[i].object, red);
 		}
 	}
 });
+
+function flashColor(object, color) {
+	console.log(object.material.color);
+	const prevColor = object.material.color.clone();
+	object.material.color.set(color);
+	setTimeout(() => {
+		object.material.color.set(prevColor);
+	}, 100);
+}
 
 function updateVelocities(delta) {
 	const GRAVITY = 9.8;
@@ -258,13 +272,13 @@ function animate() {
 	world.step(timeStep);
 
 	if (controls.isLocked) {
-		// Update raycaster origin based on controls position
+		// Update movementRaycaster origin based on controls position
 		const controlPos = controls.getObject().position;
-		raycaster.ray.origin.copy(controlPos);
-		raycaster.ray.origin.y -= 10;
+		movementRaycaster.ray.origin.copy(controlPos);
+		movementRaycaster.ray.origin.y -= 10;
 
 		// Check for intersections
-		const onObject = raycaster.intersectObjects(objects).length > 0;
+		const onObject = movementRaycaster.intersectObjects(objects).length > 0;
 
 		// Calculate the time delta
 		const delta = (time - prevTime) / 1000;
