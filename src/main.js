@@ -14,6 +14,9 @@ import centerBoxBody from "./physics/centerBoxPhysics";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import gunModel from "../assets/models/shotgun.glb?url";
 import CannonDebugger from "cannon-es-debugger";
+import { DecalGeometry } from "three/addons/geometries/DecalGeometry.js";
+import gunCockAudioUrl from "../assets/audio/gun-cock.wav";
+import gunShotAudioUrl from "../assets/audio/gun-shot.wav";
 
 // Instantiate movement and shooting raycaster objects
 let movementRaycaster;
@@ -32,6 +35,10 @@ const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 const pointer = new THREE.Vector2();
 let controls;
+
+// Instantiate Audio objects
+const gunCockAudio = new Audio(gunCockAudioUrl);
+const gunShotAudio = new Audio(gunShotAudioUrl);
 
 // instantiate Scene, camera and renderer
 const scene = new THREE.Scene();
@@ -188,6 +195,8 @@ function onWindowResize() {
 	controls.handleResize();
 }
 
+let canShoot = true;
+
 window.addEventListener("click", (event) => {
 	// objects that can be raycasted
 	const objectsToIntersect = [BoxMesh];
@@ -203,8 +212,16 @@ window.addEventListener("click", (event) => {
 		console.log(intersects);
 
 		const red = new THREE.Color(0xff0000);
-		for (let i = 0; i < intersects.length; i++) {
-			flashColor(intersects[i].object, red);
+
+		if (canShoot) {
+			canShoot = false;
+			playShotgunSound();
+			for (let i = 0; i < intersects.length; i++) {
+				flashColor(intersects[i].object, red);
+			}
+			setTimeout(() => {
+				canShoot = true;
+			}, 1000);
 		}
 	}
 });
@@ -216,6 +233,13 @@ function flashColor(object, color) {
 	setTimeout(() => {
 		object.material.color.set(prevColor);
 	}, 100);
+}
+
+async function playShotgunSound() {
+	gunShotAudio.play();
+	setTimeout(() => {
+		gunCockAudio.play();
+	}, 500);
 }
 
 function updateVelocities(delta) {
