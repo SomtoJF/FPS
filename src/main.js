@@ -185,6 +185,8 @@ function onWindowResize() {
 }
 
 window.addEventListener("click", (event) => {
+	// objects that can be raycasted
+	const objectsToIntersect = [BoxMesh];
 	if (controls.isLocked) {
 		console.log("Locked");
 		pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -193,13 +195,58 @@ window.addEventListener("click", (event) => {
 		raycaster.setFromCamera(pointer, camera);
 
 		// calculate objects intersecting the picking ray
-		const intersects = raycaster.intersectObjects(scene.children);
+		const intersects = raycaster.intersectObjects(objectsToIntersect);
+		console.log(intersects);
 
 		for (let i = 0; i < intersects.length; i++) {
 			intersects[i].object.material.color.set(0xff0000);
 		}
 	}
 });
+
+function updateVelocities(delta) {
+	const GRAVITY = 9.8;
+	const MASS = 100.0;
+	const DAMPENING = 10.0;
+	const MOVE_SPEED = 400.0;
+
+	velocity.x -= velocity.x * DAMPENING * delta;
+	velocity.z -= velocity.z * DAMPENING * delta;
+	velocity.y -= GRAVITY * MASS * delta;
+
+	direction.z = Number(moveForward) - Number(moveBackward);
+	direction.x = Number(moveRight) - Number(moveLeft);
+	direction.normalize();
+
+	if (moveForward || moveBackward) {
+		velocity.z -= direction.z * MOVE_SPEED * delta;
+	}
+
+	if (moveLeft || moveRight) {
+		velocity.x -= direction.x * MOVE_SPEED * delta;
+	}
+}
+
+function updateCharacterMovement(delta, onObject) {
+	controls.moveRight(-velocity.x * delta);
+	controls.moveForward(-velocity.z * delta);
+	controls.getObject().position.y += velocity.y * delta;
+
+	if (onObject) {
+		velocity.y = Math.max(0, velocity.y);
+		canJump = true;
+	}
+}
+
+function limitCharacterYPosition() {
+	const MIN_Y = 10;
+
+	if (controls.getObject().position.y < MIN_Y) {
+		velocity.y = 0;
+		controls.getObject().position.y = MIN_Y;
+		canJump = true;
+	}
+}
 
 console.log(controls);
 
@@ -210,44 +257,26 @@ function animate() {
 	const time = performance.now();
 	world.step(timeStep);
 
-	if (controls.isLocked === true) {
-		raycaster.ray.origin.copy(controls.getObject().position);
+	if (controls.isLocked) {
+		// Update raycaster origin based on controls position
+		const controlPos = controls.getObject().position;
+		raycaster.ray.origin.copy(controlPos);
 		raycaster.ray.origin.y -= 10;
 
-		const intersections = raycaster.intersectObjects(objects, false);
+		// Check for intersections
+		const onObject = raycaster.intersectObjects(objects).length > 0;
 
-		const onObject = intersections.length > 0;
-
+		// Calculate the time delta
 		const delta = (time - prevTime) / 1000;
 
-		velocity.x -= velocity.x * 10.0 * delta;
-		velocity.z -= velocity.z * 10.0 * delta;
+		// Update velocities
+		updateVelocities(delta);
 
-		velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+		// Update character movement
+		updateCharacterMovement(delta, onObject);
 
-		direction.z = Number(moveForward) - Number(moveBackward);
-		direction.x = Number(moveRight) - Number(moveLeft);
-		direction.normalize(); // this ensures consistent movements in all directions
-
-		if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
-		if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
-
-		if (onObject === true) {
-			velocity.y = Math.max(0, velocity.y);
-			canJump = true;
-		}
-
-		controls.moveRight(-velocity.x * delta);
-		controls.moveForward(-velocity.z * delta);
-
-		controls.getObject().position.y += velocity.y * delta; // new behavior
-
-		if (controls.getObject().position.y < 10) {
-			velocity.y = 0;
-			controls.getObject().position.y = 10;
-
-			canJump = true;
-		}
+		// Limit character Y position
+		limitCharacterYPosition();
 	}
 
 	prevTime = time;
